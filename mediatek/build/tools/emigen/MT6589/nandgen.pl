@@ -16,20 +16,18 @@ require 'ParseExcel.pm';
 #****************************************************************************
 # Customization Field
 #****************************************************************************
-my $DebugPrint = "yes";
+my $DebugPrint = "no";
 my $VersionAndChanglist = "2.0 support autodetect NAND ID and improvement\n";
 my $PLATFORM = $ENV{MTK_PLATFORM};# MTxxxx
 my $PROJECT = $ENV{PROJECT};
 my $FULL_PROJECT = $ENV{FULL_PROJECT};
 my $PAGE_SIZE = $ENV{MTK_NAND_PAGE_SIZE};
 my @MemoryDeviceList;
-print "\$PLATFORM=$PLATFORM,\$PROJECT=$PROJECT,\$FULL_PROJECT=$FULL_PROJECT,\$PAGE_SIZE=$PAGE_SIZE\n";
 #****************************************************************************
 # Main Thread Field
 #****************************************************************************
     &ReadNANDExcelFile();
     &GenNANDHeaderFile();
-    print "nandgen done\n";
     exit 0;
 
 
@@ -52,25 +50,12 @@ sub ReadNANDExcelFile
         $COLUMN_LIST{$tmp} = $col;
 	}
 	@all_column=sort (keys(%COLUMN_LIST));
-	print "@all_column\n";
 	
 	for($row = 1,$tmp = &xls_cell_value($sheet, $row, $COLUMN_LIST{Part_Number});$tmp;$row++,$tmp = &xls_cell_value($sheet, $row, $COLUMN_LIST{Part_Number}))
 	{
 		foreach $i (@all_column){
 			$MemoryDeviceList[$row-1]{$i}=&xls_cell_value($sheet, $row, $COLUMN_LIST{$i});
 		}
-	}
-
-	if($DebugPrint eq "yes"){
-		print "~~~~~~~~~EXCEL INFO~~~~~~~~~~~\n";
-		for($index=0;$index<@MemoryDeviceList;$index++){
-			print "index:$index\n";
-			foreach $i (@all_column){
-				printf ("%-15s:%-20s ",$i,$MemoryDeviceList[$index]->{$i});
-			}
-			print "\n";
-		}
-		print "~~~~~~~~~There are $index Nand Chips~~~~~~~~~~~\n";
 	}
 }
 
@@ -91,13 +76,11 @@ sub GenNANDHeaderFile()
 			my $ID=$MemoryDeviceList[$iter]->{Nand_ID};
 			if(!exists($InFileChip{$ID})){
 				if(length($ID)%2){
-					print "The chip:$ID have wrong number!\n";
 				}else{	
 					$ID_length=length($ID)/2-1;
 					if($ID_length > $Longest_ID){
 						$Longest_ID = $ID_length;
 					}
-					#print "\$Longest_ID=$Longest_ID\n";
 					if ($MemoryDeviceList[$iter]->{CacheRead} eq "YES")
 					{
 						$advance_option += 2;
@@ -110,17 +93,11 @@ sub GenNANDHeaderFile()
 					$Chip_count++;
 				}
 			}else{
-				print "There more than 1 chip have the ID:$MemoryDeviceList[$iter]->{Nand_ID},you should modify the excel\n";
 			}
 		}
 		
 	}
 	my $FD = &open_for_rw($NAND_LIST_DEFINE_H_NAME);
-    print $FD "\n#ifndef __NAND_DEVICE_LIST_H__\n#define __NAND_DEVICE_LIST_H__\n\n";
-	print $FD "#define NAND_MAX_ID\t\t$Longest_ID\n";
-	print $FD "#define CHIP_CNT\t\t$Chip_count\n";
-	print $FD &struct_flashdev_info_define();
-	print $FD "static const flashdev_info gen_FlashTable[]={\n";
 	foreach $ID (sort by_length (keys(%InFileChip))){
 		my $it=$InFileChip{$ID}->{Index};
 		#creat ID arry string
@@ -137,14 +114,7 @@ sub GenNANDHeaderFile()
 			}
 		}
 		$arry_str.="}";
-		print "ID=$arry_str\n";
-		#print string to file
-		print $FD "\t{$arry_str, $InFileChip{$ID}->{IDLength},$MemoryDeviceList[$it]->{AddrCycle}, $MemoryDeviceList[$it]->{IOWidth},$MemoryDeviceList[$it]->{TotalSize_MB},$MemoryDeviceList[$it]->{BlockSize_KB},$MemoryDeviceList[$it]->{PageSize_B},$MemoryDeviceList[$it]->{SpareSize_B},$MemoryDeviceList[$it]->{Timing},";
-		printf $FD ("\"%.30s\",%d}, \n",$MemoryDeviceList[$it]->{Part_Number},$InFileChip{$ID}->{ADV_OPT});
 	}
-
-    print $FD "};\n\n";
-	print $FD "#endif\n";
     close $FD;
 }
 
@@ -164,7 +134,6 @@ sub xls_cell_value()
         return $cell->Value();
     } else
     {
-        print "$Sheet: row=$row, col=$col undefined\n";
         return;
     }
 }
@@ -177,7 +146,6 @@ sub error_handler()
 {
     my($error_msg, $file, $line_no) = @_;
     my $final_error_msg = "NandGen ERROR: $error_msg at $file line $line_no\n";
-    print $final_error_msg;
     die $final_error_msg;
 }
 #*******************************************************************************
@@ -251,6 +219,5 @@ sub error_handler_2
     {
         $sys_msg = $!;
     }
-    print "Fatal error: $error_msg <file: $file,line: $line_no> : $sys_msg";
     die;
 }

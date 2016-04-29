@@ -71,7 +71,7 @@ done
 if [ "${clean}" == "y" ];   then make_clean; exit 0; fi
 if [ "${rebuild}" == "y" ]; then make_clean; fi
 
-echo "**** Configuring / ` [ -z $custcfg ] || ! echo $custcfg && echo $defcfg ` / ****"
+echo "**** Configuring ****"
 # select correct configuration file
 if [ -z ${custcfg} ];       then make mediatek-configs; fi
 if [ ! -z ${custcfg} ];     then cat ${custcfg} > ${curcfg}; fi

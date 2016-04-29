@@ -18,9 +18,8 @@ my $Version=4.1;
 #my $ChangeHistory = "4.0 Support UBIFS/Support YAML/Created Files new proper folder\n";
 my $ChangeHistory = "4.1 YAML spec 1.1.1\n";
 #Switcher
-$DebugPrint="yes";
+$DebugPrint="0";
 #Global Value
-@Partition_table;
 
 # Partition_table.xls arrays and columns
 my @PARTITION_FIELD;
@@ -65,18 +64,14 @@ require 'ParseExcel.pm';
 
 #parse argv from alps/mediatek/config/{project}/ProjectConfig.mk
 $PLATFORM = $ENV{MTK_PLATFORM};
-$platform = lc($PLATFORM);
 $PROJECT = $ENV{PROJECT};
 $FULL_PROJECT = $ENV{FULL_PROJECT};
-$LCA_PRJ = $ENV{MTK_LCA_SUPPORT};
 $PAGE_SIZE = $ENV{MTK_NAND_PAGE_SIZE};
 $EMMC_SUPPORT= $ENV{MTK_EMMC_SUPPORT};
-$LDVT_SUPPORT= $ENV{MTK_LDVT_SUPPORT};
 $MTK_EMMC_OTP_SUPPORT= $ENV{MTK_EMMC_SUPPORT_OTP};
 $MTK_SHARED_SDCARD=$ENV{MTK_SHARED_SDCARD};
 $MTK_NAND_UBIFS_SUPPORT=$ENV{MTK_NAND_UBIFS_SUPPORT};
 $YAML_SUPPORT=$ENV{MTK_YAML_SCATTER_FILE_SUPPORT};
-$MTK_CIP_SUPPORT= $ENV{MTK_CIP_SUPPORT};
 if (!$ENV{TARGET_BUILD_VARIANT})
 {
     $TARGET_BUILD_VARIANT = "eng";
@@ -143,34 +138,10 @@ if($TARGET_BUILD_VARIANT eq "eng"){
 }else{
 	$SHEET_NAME = $SHEET_NAME . " user";	
 }
-if($LDVT_SUPPORT eq "yes"){
-	$SHEET_NAME = "ldvt";	
-}
-
-
 #****************************************************************************
 # main thread
 #****************************************************************************
 # get already active Excel application or open new
-print "*******************Arguments*********************\n" ;
-print "Version=$Version ChangeHistory:$ChangeHistory\n";
-print "PLATFORM = $ENV{MTK_PLATFORM};
-PROJECT = $ENV{PROJECT};
-LCA_PRJ = $ENV{MTK_LCA_SUPPORT};
-PAGE_SIZE = $ENV{MTK_NAND_PAGE_SIZE};
-EMMC_SUPPORT= $ENV{MTK_EMMC_SUPPORT};
-LDVT_SUPPORT= $ENV{MTK_LDVT_SUPPORT};
-TARGET_BUILD_VARIANT= $ENV{TARGET_BUILD_VARIANT};
-MTK_EMMC_OTP_SUPPORT= $ENV{MTK_EMMC_OTP_SUPPORT};
-MTK_SHARED_SDCARD=$ENV{MTK_SHARED_SDCARD};
-MTK_NAND_UBIFS_SUPPORT=$ENV{MTK_NAND_UBIFS_SUPPORT};
-MTK_YAML_SCATTER_FILE_SUPPORT=$ENV{MTK_YAML_SCATTER_FILE_SUPPORT};
-MTK_CIP_SUPPORT= ${MTK_CIP_SUPPORT};
-\n";
-print "SHEET_NAME=$SHEET_NAME\n";
-print "SCAT_NAME=$SCAT_NAME\n" ;
-
-print "*******************Arguments*********************\n\n\n\n" ;
 &clear_files();
 
 if ($EMMC_SUPPORT eq "yes"){
@@ -205,10 +176,6 @@ if($EMMC_SUPPORT ne "yes"){
 	&GenKernel_PartitionC();
 }
 
-print "**********Ptgen Done********** ^_^\n" ;
-
-print "\n\nPtgen modified or Generated files list:\n$SCAT_NAME\n$PARTITION_DEFINE_H_NAME\n$PART_SIZE_LOCATION\n/out/MBR EBR1 EBR2 \n\n\n\n\n";
-
 exit ;
 
 sub GetMBRStartAddress(){
@@ -242,7 +209,6 @@ sub GetMBRStartAddress(){
 	unless ($emmc_sheet)
 	{
 		my $error_msg="Ptgen CAN NOT find sheet=$EMMC_REGION_SHEET_NAME in $REGION_TABLE_FILENAME\n";
-		print $error_msg;
 		die $error_msg;
 	}
 
@@ -255,7 +221,6 @@ sub GetMBRStartAddress(){
 		$RPMB   = &xls_cell_value($emmc_sheet, $row, $rpmb,$EMMC_REGION_SHEET_NAME);
 		$USER	= &xls_cell_value($emmc_sheet, $row, $user,$EMMC_REGION_SHEET_NAME);
 		$REGION_TABLE{$region_name}	= {BOOT1=>$BOOT1,BOOT2=>$BOOT2,RPMB=>$RPMB,USER=>$USER};
-		print "In $region_name,$BOOT1,$BOOT2,$RPMB,$USER\n";
 		$row++;
 		$region_name = &xls_cell_value($emmc_sheet, $row, $region,$EMMC_REGION_SHEET_NAME);
 	}
@@ -290,40 +255,29 @@ sub GetMBRStartAddress(){
 		if(exists $REGION_TABLE{$part_num}){
 			$cur = $REGION_TABLE{$part_num}{BOOT1} + $REGION_TABLE{$part_num}{BOOT2} + $REGION_TABLE{$part_num}{RPMB};
 			$cur_user = $REGION_TABLE{$part_num}{USER};
-			print "Chose region layout: $part_num, $REGION_TABLE{$part_num}{BOOT1} + $REGION_TABLE{$part_num}{BOOT2} + $REGION_TABLE{$part_num}{RPMB}=$cur \$REGION_TABLE{\$part_num}{USER}=$cur_user\n";
 			if ($cur > $MAX_address) {
 				$MAX_address = $cur;
 			}
 			if($cur_user < $Min_user_region || $Min_user_region == 0){
 				$Min_user_region = 	$cur_user;			
 			}
-			#print "\$Min_user_region=$Min_user_region\n";
 		}else{
 			$MAX_address = 6*1024; #default Fix me!!!
 			my $error_msg="ERROR:Ptgen CAN NOT find $part_num in $REGION_TABLE_FILENAME\n";
-			print $error_msg;
-#			die $error_msg;
 		}
 	}
-	print "The MAX BOOT1+BOOT2+RPMB=$MAX_address  \$Min_user_region=$Min_user_region in $CUSTOM_MEMORYDEVICE_H_NAME\n";	
-
 	if (-e $EMMC_COMPO)
 	{
 		`chmod 777 $EMMC_COMPO`;
 		$combo_start_address = do "$EMMC_COMPO";
 		
 	}else{
-#		print "No $EMMC_COMPO Set MBR_Start_Address_KB=6MB\n";
-#		$combo_start_address = 6*1024; #Fix Me!!!
-		print "No $EMMC_COMPO\n";
 	}
 
 	if ($MAX_address < $combo_start_address) {
 		$MBR_Start_Address_KB = $combo_start_address;
-		print "Get MBR_Start_Address_KB from $EMMC_COMPO = $combo_start_address\n";
 	}else{
 		$MBR_Start_Address_KB = $MAX_address;
-		print "Get MBR_Start_Address_KB from $CUSTOM_MEMORYDEVICE_H_NAME = $MAX_address\n";
 	}
 }
 
@@ -379,7 +333,6 @@ sub ReadExcelFile()
     unless ($sheet)
     {
 		my $error_msg="Ptgen CAN NOT find sheet=$SHEET_NAME in $PART_TABLE_FILENAME\n";
-		print $error_msg;
 		die $error_msg;
     }
     my $row_t = 1;
@@ -394,9 +347,7 @@ sub ReadExcelFile()
 		$type		 = &xls_cell_value($sheet, $row, $COLUMN_TYPE,$SHEET_NAME) ;
 		if($type eq "EXT4" || $type eq "FAT" ){
 			if($pt_name eq "FAT" && $MTK_SHARED_SDCARD eq "yes"){
-				print "Skip FAT because of MTK_SHARED_SDCARD On\n";
-			}elsif($pt_name eq "CUSTOM" && $MTK_CIP_SUPPORT ne "yes"){
-	  			print "Skip CUSTOM because of MTK_CIP_SUPPORT off\n";
+			}elsif($pt_name eq "CUSTOM"){
 			}else{
 						$p_count++;			
 			}			
@@ -411,9 +362,7 @@ sub ReadExcelFile()
 	my $tmp_index=1;
 	while($pt_name ne "END"){
 		if($pt_name eq "FAT" && $MTK_SHARED_SDCARD eq "yes"){
-			print "Skip FAT because of MTK_SHARED_SDCARD On\n";
-		}elsif($pt_name eq "CUSTOM" && $MTK_CIP_SUPPORT ne "yes"){
-	  		print "Skip CUSTOM because of MTK_CIP_SUPPORT off\n";
+		}elsif($pt_name eq "CUSTOM"){
 		}else{
 		$PARTITION_FIELD[$row_t -1] = $pt_name;
 		$SIZE_FIELD_KB[$row_t -1]    = &xls_cell_value($sheet, $row, $COLUMN_SIZEKB,$SHEET_NAME) ;
@@ -452,7 +401,6 @@ sub ReadExcelFile()
 					$TYPE_FIELD[$row_t -1] = "Raw data";
 					$RESERVED_FIELD[$row_t-1]= 0 ;
 
-					print "ebr $px_index $br_count\n";
 					$PARTITION_IDX_FIELD[$row_t-1]=$px_index;
 					$BR_INDEX[$px_index] = 0;	
 					$px_index++;			
@@ -505,7 +453,6 @@ sub ReadExcelFile()
                 if ($line =~ /\A\s*BOARD_MTK_${part_name}_SIZE_KB\s*:=\s*(\d+)/)
                 {
                     $SIZE_FIELD_KB[$iter] = $1;
-                    print "by project size $part_name = $1 KB\n";
                 }
             }
         }
@@ -525,7 +472,6 @@ sub ReadExcelFile()
                     if ($line =~ /\A\s*BOARD_MTK_${part_name}_SIZE_KB\s*:=\s*(\d+)/)
                     {
                     	$SIZE_FIELD_KB[$iter] = $1;
-                        print "by flavor project size $part_name = $1 KB\n";
                     }
                 }
             }
@@ -570,7 +516,6 @@ if(0){
 	for($row=1;$row < @PARTITION_FIELD;$row++){
 		if($REGION_FIELD[$row] eq "USER" && $PARTITION_FIELD[$row] ne "USRDATA"){
 			$Min_user_region -= $SIZE_FIELD_KB[$row];
-			print "$PARTITION_FIELD[$row]=$SIZE_FIELD_KB[$row] \$Min_user_region=$Min_user_region \n";
 		}
 	}
 	$Min_user_region -= $MBR_Start_Address_KB;
@@ -603,11 +548,8 @@ my $InUser=0;
 	
 	if($DebugPrint eq 1){
 		for($row=0;$row < @PARTITION_FIELD;$row++){
-			print "START=$START_FIELD_Byte_HEX[$row],		Partition=$PARTITION_FIELD[$row],		SIZE=$SIZE_FIELD_KB[$row],	DL_=$DL_FIELD[$row]" ;
 			if ($EMMC_SUPPORT eq "yes"){
-            	print ", 	Partition_Index=$PARTITION_IDX_FIELD[$row],	REGION =$REGION_FIELD[$row],RESERVE = $RESERVED_FIELD[$row]";
         	} 
-			print "\n";
 		}
 
 	}
@@ -618,7 +560,6 @@ my $InUser=0;
     {
         die "error in excel file no data!\n" ;
     } 
-    print "There are $total_rows Partition totally!.\n" ;
 }
 #****************************************************************************
 # subroutine:  GenHeaderFile
@@ -649,13 +590,6 @@ sub GenHeaderFile ()
 		}
 	}
 #Uboot re-name
-	print $partition_define_h_fd "/*Uboot re-name*/\n";
-	for ($iter=0; $iter< $total_rows; $iter++){
-		if($uboot_alias{$PARTITION_FIELD[$iter]}&&($uboot_alias{$PARTITION_FIELD[$iter]} ne $preloader_alias{$PARTITION_FIELD[$iter]})){
-			$temp = "#define PART_$uboot_alias{$PARTITION_FIELD[$iter]} \"$uboot_alias{$PARTITION_FIELD[$iter]}\" \n";
-			print $partition_define_h_fd $temp ;
-		}
-	}
     print $partition_define_h_fd "\n#define PART_FLAG_NONE              0 \n";   
     print $partition_define_h_fd "#define PART_FLAG_LEFT             0x1 \n";  
     print $partition_define_h_fd "#define PART_FLAG_END              0x2 \n";  
@@ -757,7 +691,6 @@ __TEMPLATE
 	print $partition_define_c_fd "struct MBR_EBR_struct MBR_EBR_px[MBR_COUNT]={\n";
 	my $iter_p=0;
 	my $iter_c = @BR_INDEX;
-	print "BR COUNT is $iter_c $BR_INDEX[$iter_c-1]\n";
 	for($iter_p=0;$iter_p<=$BR_INDEX[$iter_c-1];$iter_p++){
 		if($iter_p ==0){
 			print $partition_define_c_fd "\t{\"mbr\", {";
@@ -1053,7 +986,6 @@ my @BR = (
 			}
 			
 			if($iter == $BR_INDEX[$iter_p]){
-				print "mbr_$iter p_$iter_p $BR_INDEX[$iter_p] index_$item_s\n";
 				$BR[$iter][1][$item_s][0] = 0x83;
 				$BR[$iter][1][$item_s][1] = $start_block[$iter_p] - $ebr_start_block[$iter];
 				$BR[$iter][1][$item_s][2] = $size_block[$iter_p];
@@ -1083,21 +1015,10 @@ my @BR = (
 		if($iter_p == 1){
 				next;
 			}
-		printf ("p%d start_block %x size_block %x\n",$iter_p,$start_block[$iter_p],$size_block[$iter_p]);
 	}
-	for($iter =0;$iter <= $ebr_count;$iter++){
-		print "\n$BR[$iter][0] ";
-		for($iter_p=0;$iter_p<4;$iter_p++){
-			printf("%x ",$BR[$iter][1][$iter_p][0]);
-			printf("%x ",$BR[$iter][1][$iter_p][1]);
-			printf("%x ",$BR[$iter][1][$iter_p][2]);
-		}
-	}
-	print "\n";
 # Generate MBR&EBR binary file -----------------------------------------------------
 foreach my $sBR (@BR){
-	print("Generate $sBR->[0] bin file\n");
-	
+
 	#create file
 	my $xbr_fd=&open_for_rw("$sBR->[0]");
 	print $xbr_fd pack("C512",0x0);
@@ -1192,29 +1113,15 @@ my @BR = (
 		}
 	}
 	#MBR
-	print "MBR start is $mbr_start\n";
 	$BR[0][1][0][1] = $p1_start_block = 0x20;
 	$BR[0][1][1][1] = $p2_start_block;
 	$BR[0][1][2][1] = $p3_start_block;
 	$BR[0][1][3][1] = $p4_start_block = $p3_start_block + $p3_size_block+2048;#0xCEF20;
-	print "P1 start is $p1_start_block\n";
-	print "P2 start is $p2_start_block\n";
-	print "P3 start is $p3_start_block\n";
-	print "P4 start is $p4_start_block\n";
 	$BR[0][1][0][2] = $p1_size_block = $p2_start_block - $p1_start_block;
 	$BR[0][1][1][2] = $p2_size_block;
 	$BR[0][1][2][2] = $p3_size_block;
 	#$BR[0][1][3][2] = $p4_size_block = $eMMC_size_block -$p4_start_block;
 	$BR[0][1][3][2] = $p4_size_block =0xffffffff;
-	print "P1 size is $p1_size_block\n";
-	print "P2 size is $p2_size_block\n";
-	print "P3 size is $p3_size_block\n";
-	print "P4 size is $p4_size_block\n";
-
-	print "P5 start is $p5_start_block\n";
-	print "P5 size is $p5_size_block\n";
-	print "P6 start is $p6_start_block\n";
-	print "P6 size is $p6_size_block\n";
 	#EBR1
 	$BR[1][1][0][1] = $p5_start_block - $p1_start_block;
 	$BR[1][1][0][2] = $p5_size_block;
@@ -1227,7 +1134,6 @@ my @BR = (
 
 # Generate MBR&EBR binary file -----------------------------------------------------
 foreach my $sBR (@BR){
-	print("Generate $sBR->[0] bin file\n");
 	
 	#create file
 	my $xbr_fd=open_for_rw("$sBR->[0]");
@@ -1352,7 +1258,6 @@ sub error_handler()
 {
 	   my ($error_msg, $file, $line_no) = @_;
 	   my $final_error_msg = "Ptgen ERROR: $error_msg at $file line $line_no\n";
-	   print $final_error_msg;
 	   die $final_error_msg;
 }
 
@@ -1741,7 +1646,6 @@ sub xls_cell_value()
         return $cell->Value();
     } else
     {
-        print "$Sheet: row=$row, col=$col undefined\n";
         return;
     }
 }
@@ -1777,7 +1681,6 @@ sub open_for_read
     }
     else
     {
-        print "No such file : $filepath\n";
         return undef;
     }
     open my $filehander, "< $filepath" or &error_handler_2(" Can not open $filepath for read", __FILE__, __LINE__);
@@ -1790,7 +1693,6 @@ sub error_handler_2
     {
         $sys_msg = $!;
     }
-    print "Fatal error: $error_msg <file: $file,line: $line_no> : $sys_msg";
     die;
 }
 #delete some obsolete file
@@ -1821,7 +1723,6 @@ sub clear_files
         	{
             	&error_handler_2("remove $filepath fail ", __FILE__, __LINE__);
         	}else{
-   				print "clean $filepath: clean done \n"
    			}
   		}
 	}
