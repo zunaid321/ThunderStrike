@@ -63,10 +63,10 @@ CUSTOM_HAL_MAIN_BACKUP_IMGSENSOR=
 CUSTOM_HAL_MAIN_BACKUP_LENS=dummy_lens
 
 # User space image sensor  driver: Main camera (rear camera) used sensor related tuning, setting and calibration information.Value is used main sensor name.
-CUSTOM_HAL_MAIN_IMGSENSOR=s5k3h2yx_mipi_raw 
+CUSTOM_HAL_MAIN_IMGSENSOR=ov8825_mipi_raw 
 
 # lens driver config for main camera!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-CUSTOM_HAL_MAIN_LENS=s5k3h2yxaf
+CUSTOM_HAL_MAIN_LENS=ov8825af
 
 # M-sensor hal layer library including daemon
 CUSTOM_HAL_MSENSORLIB=mmc328x akm8975 ami304 yamaha530 mag3110 akmd8963 bmm050 mc6420 mmc3416x s62xd lsm303md hscdtd006 qmc5983 akmd09911 mc64xx bmm056 mc41xx
@@ -139,10 +139,10 @@ CUSTOM_KERNEL_MAIN_BACKUP_IMGSENSOR=
 CUSTOM_KERNEL_MAIN_BACKUP_LENS=dummy_lens
 
 # Kernel space image sensor driver:Main camera (rear camera) used sensor driver.Value is used main sensor name.
-CUSTOM_KERNEL_MAIN_IMGSENSOR=s5k3h2yx_mipi_raw
+CUSTOM_KERNEL_MAIN_IMGSENSOR=ov8825_mipi_raw
 
 # lens driver config for main camera
-CUSTOM_KERNEL_MAIN_LENS=s5k3h2yxaf
+CUSTOM_KERNEL_MAIN_LENS=ov8825af
 
 # RTC driver customization
 CUSTOM_KERNEL_RTC=rtc
