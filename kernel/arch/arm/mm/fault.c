@@ -548,25 +548,6 @@ do_DataAbort(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
 	int ret;
 	struct siginfo info;
 
-	/*if (!user_mode(regs)) {
-		thread->cpu_excp++;
-		if (thread->cpu_excp == 1) {
-			thread->regs_on_excp = (void *)regs;
-			aee_excp_regs = (void*)regs;
-		}
-		/*
-		 * NoteXXX: The data abort exception may happen twice
-		 *          when calling probe_kernel_address() in which.
-		 *          __copy_from_user_inatomic() is used and the
-		 *          fixup table lookup may be performed.
-		 *          Check if the nested panic happens via 
-		 *          (cpu_excp >= 3).
-		 */
-		/*if (thread->cpu_excp >= 3) {
-			aee_stop_nested_panic(regs);
-		}
-	}*/
-
 	ret = inf->fn(addr, fsr & ~FSR_LNX_PF, regs);
 	if (!ret) {
 		if (!user_mode(regs)) {
@@ -605,24 +586,6 @@ do_PrefetchAbort(unsigned long addr, unsigned int ifsr, struct pt_regs *regs)
 	const struct fsr_info *inf = ifsr_info + fsr_fs(ifsr);
 	int ret;
 	struct siginfo info;
-
-	/*if (!user_mode(regs)) {
-		thread->cpu_excp++;
-		if (thread->cpu_excp == 1) {
-			thread->regs_on_excp = (void *)regs;
-		}
-		/*
-		 * NoteXXX: The data abort exception may happen twice
-		 *          when calling probe_kernel_address() in which.
-		 *          __copy_from_user_inatomic() is used and the
-		 *          fixup table lookup may be performed.
-		 *          Check if the nested panic happens via 
-		 *          (cpu_excp >= 3).
-		 */
-		/*if (thread->cpu_excp >= 3) {
-			aee_stop_nested_panic(regs);
-		}
-	}*/
 
 	ret = inf->fn(addr, ifsr | FSR_LNX_PF, regs);
 	if (!ret) {
