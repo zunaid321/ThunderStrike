@@ -52,6 +52,4 @@ extern int eMMC_rw_x(loff_t addr,u32  *buffer, int host_num, int iswrite,u32 tot
 #endif
 extern int set_env(char *name,char *value);
 extern char *get_env(char *name);
-extern long long data_free_size_th;
-EXPORT_SYMBOL(data_free_size_th);
 #endif
