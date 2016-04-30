@@ -6994,11 +6994,6 @@ static void nohz_idle_balance(int this_cpu, enum cpu_idle_type idle)
 
 		raw_spin_lock_irq(&this_rq->lock);
 		update_rq_clock(this_rq);
-#ifdef CONFIG_MTK_SCHED_CMP
-		update_idle_cpu_load(this_rq);
-#else
-		update_cpu_load(this_rq);
-#endif
 		raw_spin_unlock_irq(&this_rq->lock);
 
 		rebalance_domains(balance_cpu, CPU_IDLE);

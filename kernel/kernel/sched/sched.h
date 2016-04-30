@@ -933,13 +933,7 @@ extern void resched_cpu(int cpu);
 extern struct rt_bandwidth def_rt_bandwidth;
 extern void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime);
 
-#ifdef CONFIG_MTK_SCHED_CMP
 extern void update_idle_cpu_load(struct rq *this_rq);
-
-extern void init_task_runnable_average(struct task_struct *p);
-#else
-extern void update_cpu_load(struct rq *this_rq);
-#endif
 
 #ifdef CONFIG_CGROUP_CPUACCT
 #include <linux/cgroup.h>
