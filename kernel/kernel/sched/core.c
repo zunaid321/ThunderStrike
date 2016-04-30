@@ -5838,9 +5838,6 @@ static void migrate_tasks(unsigned int dead_cpu)
 	  * pick_next_task_rt
 	  */
 	unthrottle_offline_rt_rqs(rq);
-	
-	/* Ensure any throttled groups are reachable by pick_next_task */
-	unthrottle_offline_cfs_rqs(rq);
 
 	for ( ; ; ) {
 		/*

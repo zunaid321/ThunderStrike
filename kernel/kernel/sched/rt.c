@@ -806,28 +806,10 @@ balanced:
 		 * Disable all the borrow logic by pretending we have inf
 		 * runtime - in which case borrowing doesn't make sense.
 		 */
-		// MTK patch:  prevent normal task could run anymore, use rt_disable_borrow 
-		//rt_rq->rt_runtime = RUNTIME_INF;
-		rt_rq->rt_runtime = rt_b->rt_runtime;
+ 		rt_rq->rt_runtime = RUNTIME_INF;
 		rt_rq->rt_throttled = 0;
-#ifdef MTK_DEBUG_CGROUP
-		{
-		struct rt_rq *iter = sched_rt_period_rt_rq(rt_b, 0);
-		printk(KERN_EMERG "5-0. disable_runtime %llu\n", iter->rt_runtime);
-		iter = sched_rt_period_rt_rq(rt_b, 1);
-		printk(KERN_EMERG "5-1. disable_runtime %llu\n", iter->rt_runtime);
-		iter = sched_rt_period_rt_rq(rt_b, 2);
-		printk(KERN_EMERG "5-2. disable_runtime %llu\n", iter->rt_runtime);
-		iter = sched_rt_period_rt_rq(rt_b, 3);
-		printk(KERN_EMERG "5-3. disable_runtime %llu\n", iter->rt_runtime);
-		}
-#endif
-		raw_spin_unlock(&rt_rq->rt_runtime_lock);
-		raw_spin_unlock(&rt_b->rt_runtime_lock);
-#ifdef MTK_DEBUG_CGROUP
-		printk(KERN_ERR "disable_runtime after: rt_rq->rt_runtime=%llu rq_rt->rt_throttled=%d\n",
-			rt_rq->rt_runtime, rt_rq->rt_throttled);
-#endif
+ 		raw_spin_unlock(&rt_rq->rt_runtime_lock);
+ 		raw_spin_unlock(&rt_b->rt_runtime_lock);
 	}
 
 #ifdef CONFIG_MT_RT_SCHED_CRIT
@@ -936,8 +918,18 @@ static int do_sched_rt_period_timer(struct rt_bandwidth *rt_b, int overrun)
 	const struct cpumask *span;
 
 	span = sched_rt_period_mask();
-#ifdef MTK_DEBUG_CGROUP
-	printk(KERN_EMERG " do_sched_rt_period_timer curr_cpu=%d \n", smp_processor_id());
+#ifdef CONFIG_RT_GROUP_SCHED
+	/*
+	 * FIXME: isolated CPUs should really leave the root task group,
+	 * whether they are isolcpus or were isolated via cpusets, lest
+	 * the timer run on a CPU which does not service all runqueues,
+	 * potentially leaving other CPUs indefinitely throttled.  If
+	 * isolation is really required, the user will turn the throttle
+	 * off to kill the perturbations it causes anyway.  Meanwhile,
+	 * this maintains functionality for boot and/or troubleshooting.
+	 */
+	if (rt_b == &root_task_group.rt_bandwidth)
+		span = cpu_online_mask;
 #endif
 	for_each_cpu(i, span) {
 		int enqueue = 0;
@@ -2209,7 +2201,11 @@ static void watchdog(struct rq *rq, struct task_struct *p)
 	if (soft != RLIM_INFINITY) {
 		unsigned long next;
 
-		p->rt.timeout++;
+		if (p->rt.watchdog_stamp != jiffies) {
+			p->rt.timeout++;
+			p->rt.watchdog_stamp = jiffies;
+		}
+
 		next = DIV_ROUND_UP(min(soft, hard), USEC_PER_SEC/HZ);
 		if (p->rt.timeout > next)
 			p->cputime_expires.sched_exp = p->se.sum_exec_runtime;
