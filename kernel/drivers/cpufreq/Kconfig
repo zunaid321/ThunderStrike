@@ -88,6 +88,11 @@ config CPU_FREQ_DEFAULT_GOV_ONDEMAND
 	  governor. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the performance governor.
 
+config CPU_FREQ_DEFAULT_GOV_THUNDERX
+	bool "thunderx"
+	select CPU_FREQ_GOV_THUNDERX
+	help
+
 config CPU_FREQ_DEFAULT_GOV_HYBRID
 	bool "hybrid"
 	select CPU_FREQ_GOV_HYBRID
@@ -441,6 +446,12 @@ config CPU_FREQ_GOV_INTELLIDEMAND
           For details, take a look at linux/Documentation/cpu-freq.
 
           If in doubt, say N.
+
+config CPU_FREQ_GOV_THUNDERX
+		tristate "'thunderx' cpufreq governor"
+		depends on CPU_FREQ
+		help
+		  thunderx' - a "power optimized" governor for Mediatek SoCs
 
 menu "x86 CPU frequency scaling drivers"
 depends on X86
