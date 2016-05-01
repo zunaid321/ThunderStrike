@@ -277,7 +277,13 @@ notrace static void __cpuinit start_secondary(void *unused)
 	 * for which cpus receive the IPI. Holding this
 	 * lock helps us to not include this cpu in a currently in progress
 	 * smp_call_function().
-	 *
+	 * Enable the espfix hack for this CPU
+	 */
+#ifdef CONFIG_X86_64
+	init_espfix_ap();
+#endif
+
+	/*
 	 * We need to hold vector_lock so there the set of online cpus
 	 * does not change while we are assigning vectors to cpus.  Holding
 	 * this lock ensures we don't half assign or remove an irq from a cpu.
